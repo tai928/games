@@ -24,14 +24,15 @@
       background: #171717;
       border: 1px solid #2a2a2a;
       border-radius: 28px;
-      padding: 28px;
+      padding: clamp(14px, 3vw, 28px);
       box-shadow: 0 20px 60px rgba(0,0,0,.35);
     }
 
     .layout {
       display: grid;
-      grid-template-columns: 1fr 260px;
+      grid-template-columns: minmax(0, 1fr) 260px;
       gap: 28px;
+      align-items: start;
     }
 
     h1 {
@@ -47,20 +48,24 @@
     }
 
     .board {
+      --board-size: min(84vw, 420px);
+      --cell-size: calc(var(--board-size) / 8 - 3.5px);
       display: grid;
-      grid-template-columns: repeat(8, 42px);
+      grid-template-columns: repeat(8, var(--cell-size));
       gap: 4px;
       background: #262626;
       padding: 12px;
       border-radius: 24px;
       width: fit-content;
+      max-width: 100%;
       user-select: none;
       touch-action: none;
+      margin-inline: auto;
     }
 
     .cell {
-      width: 42px;
-      height: 42px;
+      width: var(--cell-size);
+      height: var(--cell-size);
       border-radius: 12px;
       background: #0a0a0a;
       border: 1px solid #232323;
@@ -79,8 +84,9 @@
 
     .tray {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
+      align-items: stretch;
     }
 
     .piece-card {
@@ -94,6 +100,8 @@
       position: relative;
       transition: transform .12s ease, border-color .12s ease, background .12s ease;
       cursor: grab;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
     }
 
     .piece-card:hover { transform: translateY(-2px); }
@@ -164,7 +172,7 @@
       position: fixed;
       pointer-events: none;
       z-index: 9999;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%) scale(1.05);
       opacity: .95;
       filter: drop-shadow(0 12px 24px rgba(0,0,0,.35));
     }
@@ -209,20 +217,103 @@
     }
 
     @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; }
-      .board { grid-template-columns: repeat(8, min(42px, 10vw)); }
-      .cell {
-        width: min(42px, 10vw);
-        height: min(42px, 10vw);
+      .layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .board {
+        --board-size: min(92vw, 430px);
+      }
+
+      aside {
+        display: grid;
+        gap: 12px;
       }
     }
 
     @media (max-width: 640px) {
-      .app { padding: 18px; border-radius: 22px; }
-      h1 { font-size: 26px; }
-      .tray { grid-template-columns: 1fr; }
-      .piece-card { min-height: 100px; }
-      .side-card { padding: 16px; }
+      body {
+        padding: 10px;
+        align-items: stretch;
+      }
+
+      .app {
+        padding: 14px;
+        border-radius: 22px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .sub {
+        font-size: 13px;
+        margin-bottom: 14px;
+      }
+
+      .board {
+        --board-size: min(94vw, 380px);
+        padding: 8px;
+        gap: 3px;
+        border-radius: 18px;
+      }
+
+      .cell {
+        border-radius: 9px;
+      }
+
+      .tray-title {
+        margin: 18px 0 10px;
+      }
+
+      .tray {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .piece-card {
+        min-height: 86px;
+        border-radius: 16px;
+        padding: 8px;
+      }
+
+      .mini-cell {
+        width: 16px;
+        height: 16px;
+        border-radius: 5px;
+      }
+
+      .side-card {
+        padding: 14px;
+        border-radius: 18px;
+        margin-bottom: 10px;
+      }
+
+      .score {
+        font-size: 28px;
+      }
+
+      .state {
+        font-size: 16px;
+      }
+
+      button.main-btn {
+        height: 44px;
+        border-radius: 14px;
+        margin-top: 12px;
+      }
+
+      .info {
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .drag-piece .mini-cell.on {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+      }
     }
   </style>
 </head>
@@ -442,15 +533,22 @@
       });
     }
 
+    function getMiniPieceSize() {
+      if (window.innerWidth <= 640) return { size: 16, gap: 2 };
+      return { size: 22, gap: 3 };
+    }
+
     function renderTray() {
       trayEl.innerHTML = '';
+      const mini = getMiniPieceSize();
+
       tray.forEach(piece => {
         const card = document.createElement('div');
         card.className = 'piece-card';
         card.dataset.id = piece.id;
 
         const inner = document.createElement('div');
-        renderPieceShape(piece.shape, inner, 22, 3, 'mini-cell');
+        renderPieceShape(piece.shape, inner, mini.size, mini.gap, 'mini-cell');
         card.appendChild(inner);
 
         const start = (clientX, clientY) => startDrag(piece.id, clientX, clientY, card);
@@ -499,7 +597,9 @@
       const dragEl = document.createElement('div');
       dragEl.className = 'drag-piece';
       const inner = document.createElement('div');
-      renderPieceShape(piece.shape, inner, 24, 3, 'mini-cell');
+      const dragSize = window.innerWidth <= 640 ? 18 : 24;
+      const dragGap = window.innerWidth <= 640 ? 2 : 3;
+      renderPieceShape(piece.shape, inner, dragSize, dragGap, 'mini-cell');
       dragEl.appendChild(inner);
       document.body.appendChild(dragEl);
       dragEl.style.left = clientX + 'px';
@@ -575,6 +675,11 @@
     document.addEventListener('touchend', (e) => {
       const t = e.changedTouches[0];
       if (t) endDrag(t.clientX, t.clientY);
+    });
+
+    window.addEventListener('resize', () => {
+      renderTray();
+      renderBoard();
     });
 
     resetBtn.addEventListener('click', resetGame);
