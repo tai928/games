@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Suika Style Game</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+      color: #7c2d12;
+    }
+
+    .app {
+      width: min(100%, 980px);
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(124,45,18,.08);
+      border-radius: 28px;
+      padding: clamp(16px, 3vw, 28px);
+      box-shadow: 0 18px 60px rgba(124,45,18,.12);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(32px, 6vw, 48px);
+      line-height: 1;
+      color: #9a3412;
+    }
+
+    .sub {
+      color: #9a3412cc;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 14px;
+    }
+
+    .game-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .next-bar {
+      width: min(100%, 420px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: #ffedd5;
+      border: 1px solid rgba(124,45,18,.08);
+      border-radius: 18px;
+      padding: 10px 14px;
+    }
+
+    .next-preview {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      box-shadow: inset 0 -6px 0 rgba(0,0,0,.08);
+    }
+
+    .board-shell {
+      position: relative;
+      width: min(100%, 420px);
+      aspect-ratio: 3 / 4.8;
+      background: linear-gradient(180deg, #fed7aa 0%, #fdba74 100%);
+      border: 4px solid #ea580c;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: inset 0 -20px 40px rgba(255,255,255,.18);
+      touch-action: none;
+      user-select: none;
+    }
+
+    .drop-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(255,255,255,.55);
+      pointer-events: none;
+      transform: translateX(-50%);
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .side-card {
+      background: #fff7ed;
+      border: 1px solid rgba(124,45,18,.08);
+      border-radius: 22px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #9a3412b0;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      font-size: 30px;
+      font-weight: 800;
+      color: #9a3412;
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-weight: 800;
+      background: #ea580c;
+      color: #fff;
+      cursor: pointer;
+      transition: transform .08s ease, opacity .12s ease;
+      margin-top: 12px;
+    }
+
+    .btn:hover { opacity: .94; }
+    .btn:active { transform: scale(.98); }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      font-size: 13px;
+      color: #9a3412;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.55);
+      border-radius: 14px;
+      padding: 8px;
+    }
+
+    .emoji-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 -5px 0 rgba(0,0,0,.08);
+      flex-shrink: 0;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,247,237,.8);
+      text-align: center;
+      padding: 20px;
+    }
+
+    .overlay.show { display: flex; }
+
+    .overlay-box h2 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 6vw, 40px);
+      color: #9a3412;
+    }
+
+    .overlay-box p {
+      margin: 0 0 14px;
+      line-height: 1.7;
+      color: #9a3412cc;
+      font-size: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 10px;
+        align-items: stretch;
+      }
+
+      .app {
+        border-radius: 22px;
+        padding: 14px;
+      }
+
+      .next-bar {
+        width: 100%;
+      }
+
+      .board-shell {
+        width: 100%;
+        border-radius: 22px;
+      }
+
+      .legend {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .value {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="layout">
+      <section>
+        <a href="index.html">Homeに戻る</a>
+        <h1>Suika Style</h1>
+        <div class="sub">
+          上からフルーツを落として、同じ種類同士をくっつけて進化させるゲーム。<br>
+          なるべく大きいフルーツを作ってスコアを伸ばそう。
+        </div>
+
+        <div class="game-wrap">
+          <div class="next-bar">
+            <div>次に落ちるフルーツ</div>
+            <div id="nextPreview" class="next-preview">🍒</div>
+          </div>
+
+          <div id="boardShell" class="board-shell">
+            <div id="dropLine" class="drop-line"></div>
+            <canvas id="gameCanvas" width="420" height="672"></canvas>
+            <div id="overlay" class="overlay">
+              <div class="overlay-box">
+                <h2>GAME OVER</h2>
+                <p>フルーツが上まで積み上がったよ。<br>もう一度遊ぶ？</p>
+                <button id="overlayBtn" class="btn">リスタート</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside>
+        <div class="side-card">
+          <div class="label">SCORE</div>
+          <div id="score" class="value">0</div>
+          <div style="height:12px"></div>
+          <div class="label">BEST</div>
+          <div id="best" class="value">0</div>
+          <button id="restartBtn" class="btn">リスタート</button>
+        </div>
+
+        <div class="side-card">
+          <div class="label" style="margin-bottom:10px;">進化表</div>
+          <div id="legend" class="legend"></div>
+        </div>
+
+        <div class="side-card" style="font-size:13px; line-height:1.8; color:#9a3412;">
+          <strong style="display:block; margin-bottom:6px; color:#9a3412;">操作方法</strong>
+          PC: マウス移動で位置決め → クリックで落とす<br>
+          スマホ: 指を左右に動かして位置決め → タップで落とす
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const boardShell = document.getElementById('boardShell');
+    const dropLine = document.getElementById('dropLine');
+    const nextPreview = document.getElementById('nextPreview');
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
+    const legendEl = document.getElementById('legend');
+    const restartBtn = document.getElementById('restartBtn');
+    const overlayBtn = document.getElementById('overlayBtn');
+    const overlay = document.getElementById('overlay');
+
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+    const WALL = 18;
+    const CEILING = 86;
+    const GRAVITY = 0.28;
+    const RESTITUTION = 0.25;
+    const FRICTION = 0.995;
+    const MERGE_COOLDOWN = 10;
+
+    const FRUITS = [
+      { emoji: '🍒', r: 20, color: '#f87171', score: 10 },
+      { emoji: '🍓', r: 26, color: '#fb7185', score: 20 },
+      { emoji: '🍊', r: 34, color: '#fb923c', score: 40 },
+      { emoji: '🍎', r: 42, color: '#f43f5e', score: 80 },
+      { emoji: '🍐', r: 50, color: '#84cc16', score: 160 },
+      { emoji: '🍑', r: 58, color: '#f9a8d4', score: 320 },
+      { emoji: '🍍', r: 68, color: '#facc15', score: 640 },
+      { emoji: '🍈', r: 80, color: '#86efac', score: 1280 }
+    ];
+
+    let fruits = [];
+    let particles = [];
+    let score = 0;
+    let best = Number(localStorage.getItem('suika-best') || 0);
+    let nextIndex = 0;
+    let dropX = WIDTH / 2;
+    let canDrop = true;
+    let gameOver = false;
+    let frame = 0;
+
+    function randomNextIndex() {
+      return Math.floor(Math.random() * 4);
+    }
+
+    function resizeCanvasCSS() {
+      const size = Math.min(boardShell.clientWidth, 420);
+      boardShell.style.maxWidth = size + 'px';
+    }
+
+    function updateHUD() {
+      scoreEl.textContent = score;
+      bestEl.textContent = best;
+      const fruit = FRUITS[nextIndex];
+      nextPreview.textContent = fruit.emoji;
+      nextPreview.style.background = fruit.color;
+      nextPreview.style.color = '#fff';
+      overlay.classList.toggle('show', gameOver);
+      const linePx = (dropX / WIDTH) * boardShell.clientWidth;
+      dropLine.style.left = linePx + 'px';
+    }
+
+    function renderLegend() {
+      legendEl.innerHTML = '';
+      FRUITS.forEach((fruit, i) => {
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        item.innerHTML = `<div class="emoji-dot" style="background:${fruit.color}; color:#fff;">${fruit.emoji}</div><div>Lv.${i + 1}</div>`;
+        legendEl.appendChild(item);
+      });
+    }
+
+    function createFruit(type, x, y) {
+      const def = FRUITS[type];
+      return {
+        id: Math.random().toString(36).slice(2),
+        type,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        r: def.r,
+        mergedAt: -999,
+        resting: false
+      };
+    }
+
+    function spawnParticles(x, y, color, emoji) {
+      for (let i = 0; i < 10; i++) {
+        particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4 - 1,
+          life: 30 + Math.random() * 20,
+          color,
+          emoji: Math.random() < 0.25 ? emoji : ''
+        });
+      }
+    }
+
+    function resetGame() {
+      fruits = [];
+      particles = [];
+      score = 0;
+      nextIndex = randomNextIndex();
+      dropX = WIDTH / 2;
+      canDrop = true;
+      gameOver = false;
+      frame = 0;
+      updateHUD();
+    }
+
+    function clampDropX(x) {
+      const r = FRUITS[nextIndex].r;
+      return Math.max(WALL + r, Math.min(WIDTH - WALL - r, x));
+    }
+
+    function queueNext() {
+      nextIndex = randomNextIndex();
+      canDrop = false;
+      setTimeout(() => {
+        canDrop = true;
+      }, 280);
+    }
+
+    function dropFruit() {
+      if (!canDrop || gameOver) return;
+      const fruit = createFruit(nextIndex, dropX, CEILING / 2);
+      fruits.push(fruit);
+      queueNext();
+      updateHUD();
+    }
+
+    function updatePhysics() {
+      frame++;
+
+      for (const fruit of fruits) {
+        fruit.vy += GRAVITY;
+        fruit.x += fruit.vx;
+        fruit.y += fruit.vy;
+        fruit.vx *= FRICTION;
+
+        if (fruit.x - fruit.r < WALL) {
+          fruit.x = WALL + fruit.r;
+          fruit.vx *= -RESTITUTION;
+        }
+        if (fruit.x + fruit.r > WIDTH - WALL) {
+          fruit.x = WIDTH - WALL - fruit.r;
+          fruit.vx *= -RESTITUTION;
+        }
+        if (fruit.y + fruit.r > HEIGHT - WALL) {
+          fruit.y = HEIGHT - WALL - fruit.r;
+          fruit.vy *= -RESTITUTION;
+          fruit.vx *= 0.98;
+        }
+      }
+
+      for (let i = 0; i < fruits.length; i++) {
+        for (let j = i + 1; j < fruits.length; j++) {
+          const a = fruits[i];
+          const b = fruits[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy) || 0.0001;
+          const minDist = a.r + b.r;
+
+          if (dist < minDist) {
+            const overlap = minDist - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const push = overlap / 2;
+
+            a.x -= nx * push;
+            a.y -= ny * push;
+            b.x += nx * push;
+            b.y += ny * push;
+
+            const rvx = b.vx - a.vx;
+            const rvy = b.vy - a.vy;
+            const sepSpeed = rvx * nx + rvy * ny;
+
+            if (sepSpeed < 0) {
+              const impulse = -(1 + RESTITUTION) * sepSpeed / 2;
+              a.vx -= impulse * nx;
+              a.vy -= impulse * ny;
+              b.vx += impulse * nx;
+              b.vy += impulse * ny;
+            }
+
+            const canMerge = a.type === b.type && a.type < FRUITS.length - 1 && frame - a.mergedAt > MERGE_COOLDOWN && frame - b.mergedAt > MERGE_COOLDOWN;
+            if (canMerge && dist < minDist * 0.72) {
+              const newType = a.type + 1;
+              const mx = (a.x + b.x) / 2;
+              const my = (a.y + b.y) / 2;
+              spawnParticles(mx, my, FRUITS[newType].color, FRUITS[newType].emoji);
+              fruits.splice(j, 1);
+              fruits.splice(i, 1);
+              const merged = createFruit(newType, mx, my);
+              merged.vy = -3;
+              merged.mergedAt = frame;
+              fruits.push(merged);
+              score += FRUITS[newType].score;
+              if (score > best) {
+                best = score;
+                localStorage.setItem('suika-best', String(best));
+              }
+              return;
+            }
+          }
+        }
+      }
+
+      const topDanger = fruits.some(f => f.y - f.r < CEILING - 6 && Math.abs(f.vy) < 1.2);
+      if (topDanger) {
+        gameOver = true;
+      }
+
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.05;
+        p.life -= 1;
+      }
+      particles = particles.filter(p => p.life > 0);
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.fillRect(WALL, 0, WIDTH - WALL * 2, CEILING);
+
+      ctx.strokeStyle = 'rgba(255,255,255,.42)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(WALL + 10, CEILING);
+      ctx.lineTo(WIDTH - WALL - 10, CEILING);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawFruit(fruit) {
+      const def = FRUITS[fruit.type];
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(fruit.x, fruit.y, fruit.r, 0, Math.PI * 2);
+      ctx.fillStyle = def.color;
+      ctx.fill();
+
+      ctx.globalAlpha = 0.18;
+      ctx.beginPath();
+      ctx.arc(fruit.x - fruit.r * 0.24, fruit.y - fruit.r * 0.24, fruit.r * 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.font = `${fruit.r * 1.1}px Apple Color Emoji, Segoe UI Emoji, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(def.emoji, fruit.x, fruit.y + 2);
+      ctx.restore();
+    }
+
+    function drawPreview() {
+      if (gameOver) return;
+      const def = FRUITS[nextIndex];
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.beginPath();
+      ctx.arc(dropX, CEILING / 2, def.r, 0, Math.PI * 2);
+      ctx.fillStyle = def.color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / 50);
+        if (p.emoji) {
+          ctx.font = `20px Apple Color Emoji, Segoe UI Emoji, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.emoji, p.x, p.y);
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    function render() {
+      drawBackground();
+      drawPreview();
+      for (const fruit of fruits) drawFruit(fruit);
+      drawParticles();
+      updateHUD();
+    }
+
+    function loop() {
+      updatePhysics();
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    function setDropFromClientX(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = WIDTH / rect.width;
+      dropX = clampDropX((clientX - rect.left) * ratio);
+      updateHUD();
+    }
+
+    boardShell.addEventListener('mousemove', (e) => {
+      setDropFromClientX(e.clientX);
+    });
+
+    boardShell.addEventListener('click', () => {
+      dropFruit();
+    });
+
+    boardShell.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      setDropFromClientX(t.clientX);
+    }, { passive: true });
+
+    boardShell.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      setDropFromClientX(t.clientX);
+      e.preventDefault();
+    }, { passive: false });
+
+    boardShell.addEventListener('touchend', () => {
+      dropFruit();
+    });
+
+    restartBtn.addEventListener('click', resetGame);
+    overlayBtn.addEventListener('click', resetGame);
+    window.addEventListener('resize', () => {
+      resizeCanvasCSS();
+      updateHUD();
+    });
+
+    renderLegend();
+    resizeCanvasCSS();
+    resetGame();
+    loop();
+  </script>
+</body>
+</html>
